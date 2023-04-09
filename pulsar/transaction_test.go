@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"testing"
 	"time"
 
@@ -271,6 +272,7 @@ func TestConsumeAndProduceWithTxn(t *testing.T) {
 		msg, _ := consumer.Receive(context.Background())
 		assert.NotNil(t, msg)
 		err = consumer.Ack(msg)
+		log.Info(fmt.Sprintf("Ack message %s", msg.ID()))
 		assert.Nil(t, err)
 	}
 	// Create a goroutine to attempt receiving a message and send it to the 'done1' channel.
@@ -278,6 +280,7 @@ func TestConsumeAndProduceWithTxn(t *testing.T) {
 	go func() {
 		msg, _ := consumer.Receive(context.Background())
 		err := consumer.AckID(msg.ID())
+		log.Info(fmt.Sprintf("Ack message in goruntine %s", msg.ID()))
 		require.Nil(t, err)
 		close(done1)
 	}()
@@ -297,6 +300,7 @@ func TestConsumeAndProduceWithTxn(t *testing.T) {
 		msg, _ := consumer.Receive(context.Background())
 		require.NotNil(t, msg)
 		err = consumer.AckWithTxn(msg, txn)
+		log.Info(fmt.Sprintf("Ack with txn message %s", msg.ID()))
 		require.Nil(t, err)
 	}
 	<-done1
@@ -308,7 +312,12 @@ func TestConsumeAndProduceWithTxn(t *testing.T) {
 	// Create a goroutine to attempt receiving a message and send it to the 'done1' channel.
 	done2 := make(chan Message)
 	go func() {
-		consumer.Receive(context.Background())
+		msg, err := consumer.Receive(context.Background())
+		if err != nil {
+			log.Error("Receive error when receive message", err)
+			return
+		}
+		log.Info(fmt.Sprintf("Ack with txn message %s", msg.ID()))
 		close(done2)
 	}()
 
