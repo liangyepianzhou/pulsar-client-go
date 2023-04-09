@@ -273,17 +273,17 @@ func TestConsumeAndProduceWithTxn(t *testing.T) {
 		err = consumer.Ack(msg)
 		assert.Nil(t, err)
 	}
-	// Create a goroutine to attempt receiving a message and send it to the 'done' channel.
-	done := make(chan Message)
+	// Create a goroutine to attempt receiving a message and send it to the 'done1' channel.
+	done1 := make(chan Message)
 	go func() {
 		msg, _ := consumer.Receive(context.Background())
 		err := consumer.AckID(msg.ID())
 		require.Nil(t, err)
-		close(done)
+		close(done1)
 	}()
 	// Expectation: The consumer should not receive uncommitted messages.
 	select {
-	case <-done:
+	case <-done1:
 		require.Fail(t, "The consumer should not receive uncommitted message")
 	case <-time.After(time.Second):
 	}
@@ -304,16 +304,17 @@ func TestConsumeAndProduceWithTxn(t *testing.T) {
 		Topic:            topic,
 		SubscriptionName: sub,
 	})
-	// Create a goroutine to attempt receiving a message and send it to the 'done' channel.
-	done = make(chan Message)
+	<-done1
+	// Create a goroutine to attempt receiving a message and send it to the 'done1' channel.
+	done2 := make(chan Message)
 	go func() {
 		consumer.Receive(context.Background())
-		close(done)
+		close(done2)
 	}()
 
 	// Expectation: The consumer should not receive uncommitted messages.
 	select {
-	case <-done:
+	case <-done2:
 		require.Fail(t, "The consumer should not receive uncommitted message")
 	case <-time.After(time.Second):
 	}
